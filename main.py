@@ -41,7 +41,7 @@ def check_password(update, context):
         return ConversationHandler.END
     else:
         logger.info("Пользователь %s ввел верный пароль. Выполняется перезагрузка сервера...", update.message.from_user.username)
-        update.message.reply_text("Пароль верный. Выполняетс@я перезагрузка сервера...")
+        update.message.reply_text("Пароль верный. Выполняется перезагрузка сервера...")
         # Выполняем команду gcloud compute instances reset prod-jupyter
         try:
             subprocess.run(["gcloud", "compute", "instances", "reset", "prod-jupyter"], check=True)
@@ -52,17 +52,22 @@ def check_password(update, context):
             update.message.reply_text("Ошибка при выполнении команды. Пожалуйста, проверьте настройки.")
         return ConversationHandler.END
 
-def action_confirmed(update, context):
-    logger.info("Перезагрузка сервера успешно выполнена.")
-    # Здесь может быть логика по перезагрузке сервера
-    update.message.reply_text("Сервер успешно перезагружен.")
-    return ConversationHandler.END
-
-
 def cancel(update, context):
     logger.warning("Пользователь %s отменил действие.", update.message.from_user.username)
     update.message.reply_text("Действие отменено.")
     return ConversationHandler.END
+
+def help_command(update, context):
+    help_text = (
+        "Список команд:\n"
+        "/start - Начать\n"
+        "/reset_jupyter - Выполнить перезагрузку сервера"
+    )
+    update.message.reply_text(help_text)
+
+def show_commands(update, context):
+    if update.message.text.startswith('/'):
+        help_command(update, context)
 
 def main():
     updater = Updater(TOKEN, use_context=True)
@@ -70,6 +75,9 @@ def main():
 
     # Добавляем обработчик команды /start
     dp.add_handler(CommandHandler("start", start))
+
+    # Добавляем обработчик команды /help
+    dp.add_handler(CommandHandler("help", help_command))
 
     # Создаем ConversationHandler для команды /reset_jupyter
     conv_handler = ConversationHandler(
@@ -83,6 +91,9 @@ def main():
 
     # Добавляем ConversationHandler в диспетчер
     dp.add_handler(conv_handler)
+
+    # Добавляем обработчик текстовых сообщений
+    dp.add_handler(MessageHandler(Filters.text, show_commands))
 
     # Запускаем бота
     updater.start_polling()
